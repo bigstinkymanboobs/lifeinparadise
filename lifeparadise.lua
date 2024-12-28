@@ -1213,11 +1213,11 @@ elseif command:sub(1,5) == "annoy" then
                     -- Equip the stroller
                     annoyTool.Parent = LocalPlayer.Character
                     LocalPlayer.Character.Humanoid:EquipTool(annoyTool)
-                    task.wait(0.1)
+                    task.wait(0.01)
 
                     -- Unequip the stroller
                     annoyTool.Parent = LocalPlayer.Backpack
-                    task.wait(0.1)
+                    task.wait(0.01)
                 else
                     warn("Error: Your character is missing HumanoidRootPart.")
                     break
