@@ -1168,6 +1168,16 @@ local annoyTool = nil
 
 --------------------------------------
 -- annoy [name] (rapidly teleports behind the target and equips/unequips the stroller)
+-- Stop the annoy loop when the player respawns
+LocalPlayer.CharacterAdded:Connect(function()
+    if isAnnoying then
+        isAnnoying = false
+        print("Player respawned. Stopped annoying process.")
+        annoyTarget = nil
+        annoyTool = nil
+    end
+end)
+
 elseif command:sub(1,5) == "annoy" then
     local targetPrefix = command:sub(7):lower()
 
@@ -1213,11 +1223,11 @@ elseif command:sub(1,5) == "annoy" then
                     -- Equip the stroller
                     annoyTool.Parent = LocalPlayer.Character
                     LocalPlayer.Character.Humanoid:EquipTool(annoyTool)
-                    task.wait(0.01)
+                    task.wait(0.05)
 
                     -- Unequip the stroller
                     annoyTool.Parent = LocalPlayer.Backpack
-                    task.wait(0.01)
+                    task.wait(0.05)
                 else
                     warn("Error: Your character is missing HumanoidRootPart.")
                     break
