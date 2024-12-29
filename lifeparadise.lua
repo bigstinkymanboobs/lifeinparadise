@@ -992,7 +992,7 @@ CommandInput.FocusLost:Connect(function(enterPressed)
 	
 		-- "Rocket" time: Launch you upward by applying a BodyVelocity
 		local hrp = LocalPlayer.Character.HumanoidRootPart
-		local launchSpeed = 150
+		local launchSpeed = 500
 	
 		local bodyVel = Instance.new("BodyVelocity")
 		bodyVel.MaxForce = Vector3.new(0, 1e8, 0) -- Only vertical movement
@@ -1474,6 +1474,227 @@ elseif command:sub(1,2) == "tp" then
     -- 6) Teleport you back to original position
     myChar:SetPrimaryPartCFrame(originalPos)
     print("Returned you to your original spot.")
+
+elseif command:sub(1,9) == "highpoint" then
+   
+    local targetPrefix = command:sub(11):lower()
+
+    local highpointCFrame = CFrame.new(
+    -970.27734, 209.968979, -193.61305,
+    -0.967470527, 5.93599054e-08,  0.252983719,
+     5.12842e-08,  1,             -3.85161272e-08,
+    -0.252983719, -2.42891485e-08, -0.967470527
+)
+
+
+    -- Make sure your character exists
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        warn("Error: Your character is invalid or missing HumanoidRootPart.")
+        return
+    end
+
+    -- Store your original position
+    local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+
+    -- Find the stroller
+    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+                or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    if not tool then
+        warn("Error: No 'Stroller' gear found in your backpack/character.")
+        return
+    end
+
+    -- Equip stroller if not already
+    if tool.Parent ~= LocalPlayer.Character then
+        tool.Parent = LocalPlayer.Character
+        LocalPlayer.Character.Humanoid:EquipTool(tool)
+        task.wait(0.3)
+    end
+
+    -- Teleport YOU to highpoint coords
+    LocalPlayer.Character:SetPrimaryPartCFrame(highpointCFrame)
+    task.wait(0.3)
+
+    -- Find target player
+    local foundPlayer = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        local pName = player.Name:lower()
+        local pDisplay = player.DisplayName:lower()
+        if player ~= LocalPlayer
+           and (pName:sub(1, #targetPrefix) == targetPrefix
+           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+            foundPlayer = player
+            break
+        end
+    end
+
+    if not foundPlayer then
+        print("No matching player found for: " .. targetPrefix)
+        return
+    end
+
+    -- Make sure target has a valid character
+    local targetChar = foundPlayer.Character
+    if not targetChar 
+       or not targetChar:FindFirstChild("HumanoidRootPart") 
+       or not targetChar:FindFirstChild("Humanoid") then
+        warn("Target missing Character/HumanoidRootPart/Humanoid.")
+        return
+    end
+
+    -- Teleport the target in front of you (at the highpoint location)
+    targetChar:SetPrimaryPartCFrame(
+        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+    )
+    task.wait(0.3)
+
+    -- Activate stroller so they can sit
+    print("Activating stroller for highpoint command...")
+    tool:Activate()
+    task.wait(0.3)
+
+    -- Wait up to 5s for them to sit
+    local seatTimeout = 5
+    local seatDetected = false
+    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+    if targetHumanoid then
+        print("Waiting up to "..seatTimeout.." seconds for target to sit...")
+
+        local startTime = tick()
+        while (tick() - startTime) < seatTimeout do
+            if targetHumanoid.Sit == true then
+                seatDetected = true
+                break
+            end
+            task.wait(0.2)
+        end
+    end
+
+    if seatDetected then
+        print("Target is now seated at highpoint. Teleporting you back home...")
+    else
+        print("Target never sat. We'll still leave them here at highpoint. Teleporting you back...")
+    end
+
+    -- Teleport YOU back to original position
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+        -- Optionally un-equip the stroller
+        tool.Parent = LocalPlayer.Backpack
+        print("You're back at your original location. Target remains at highpoint.")
+    else
+        warn("Error: Missing your HumanoidRootPart upon final return.")
+    end
+
+elseif command:sub(1,9) == "fireplace" then
+   
+    local targetPrefix = command:sub(11):lower()
+
+    local highpointCFrame = CFrame.new(
+    -803.933228, 38.9999542, -107.746033,
+    0.999602377, -1.14626758e-07, 0.0281969551,
+    1.14982647e-07, 1, 1.0999325e-08,
+    -0.0281969551, 1.42377194e-08, 0.999602377
+)
+
+    -- Make sure your character exists
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        warn("Error: Your character is invalid or missing HumanoidRootPart.")
+        return
+    end
+
+    -- Store your original position
+    local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+
+    -- Find the stroller
+    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+                or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    if not tool then
+        warn("Error: No 'Stroller' gear found in your backpack/character.")
+        return
+    end
+
+    -- Equip stroller if not already
+    if tool.Parent ~= LocalPlayer.Character then
+        tool.Parent = LocalPlayer.Character
+        LocalPlayer.Character.Humanoid:EquipTool(tool)
+        task.wait(0.3)
+    end
+
+    -- Teleport YOU to highpoint coords
+    LocalPlayer.Character:SetPrimaryPartCFrame(highpointCFrame)
+    task.wait(0.3)
+
+    -- Find target player
+    local foundPlayer = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        local pName = player.Name:lower()
+        local pDisplay = player.DisplayName:lower()
+        if player ~= LocalPlayer
+           and (pName:sub(1, #targetPrefix) == targetPrefix
+           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+            foundPlayer = player
+            break
+        end
+    end
+
+    if not foundPlayer then
+        print("No matching player found for: " .. targetPrefix)
+        return
+    end
+
+    -- Make sure target has a valid character
+    local targetChar = foundPlayer.Character
+    if not targetChar 
+       or not targetChar:FindFirstChild("HumanoidRootPart") 
+       or not targetChar:FindFirstChild("Humanoid") then
+        warn("Target missing Character/HumanoidRootPart/Humanoid.")
+        return
+    end
+
+    -- Teleport the target in front of you (at the highpoint location)
+    targetChar:SetPrimaryPartCFrame(
+        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+    )
+    task.wait(0.3)
+
+    -- Activate stroller so they can sit
+    print("Activating stroller for highpoint command...")
+    tool:Activate()
+    task.wait(0.3)
+
+    -- Wait up to 5s for them to sit
+    local seatTimeout = 5
+    local seatDetected = false
+    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+    if targetHumanoid then
+        print("Waiting up to "..seatTimeout.." seconds for target to sit...")
+
+        local startTime = tick()
+        while (tick() - startTime) < seatTimeout do
+            if targetHumanoid.Sit == true then
+                seatDetected = true
+                break
+            end
+            task.wait(0.2)
+        end
+    end
+
+    if seatDetected then
+        print("Target is now seated at highpoint. Teleporting you back home...")
+    else
+        print("Target never sat. We'll still leave them here at highpoint. Teleporting you back...")
+    end
+
+    -- Teleport YOU back to original position
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+        -- Optionally un-equip the stroller
+        tool.Parent = LocalPlayer.Backpack
+        print("You're back at your original location. Target remains at highpoint.")
+    else
+        warn("Error: Missing your HumanoidRootPart upon final return.")
+    end
 
 -- cmds (toggle command list)
 elseif command == "cmds" then
