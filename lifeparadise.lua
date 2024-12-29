@@ -122,6 +122,7 @@ Available Commands:
 - rocket [name]
 - view/unview [name]
 - bring [name]
+- tp <user1> <user2>
 - goto [name]
 - fling [name]
 - jail [name]
@@ -248,32 +249,37 @@ CommandInput.FocusLost:Connect(function(enterPressed)
         CommandList.Visible = not CommandList.Visible
         print("Toggled Command List GUI")
 
+        -- re
 
     elseif command == "re" then
-        if LocalPlayer.Character
-           and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-           and OriginalPosition then
-    
-            print("Resetting character and returning to latest position...")
-    
-            -- Kill yourself
+        -- Check if you currently have a character + HRP
+        if LocalPlayer.Character 
+           and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            
+            print("Resetting character, then returning to last known position:", OriginalPosition)
+            
+            -- Kill yourself so you respawn
             LocalPlayer.Character:BreakJoints()
-    
-            -- Wait for the new character
-            local newChar = LocalPlayer.CharacterAdded:Wait()
-            local hrp = newChar:WaitForChild("HumanoidRootPart", 5)
-    
-            if hrp then
-                task.wait(1)  -- short wait so the character is fully initialized
-                hrp.CFrame = CFrame.new(OriginalPosition)
-                print("Teleported back to your last known position after reset.")
+            
+            -- Wait for the new character model
+            local newCharacter = LocalPlayer.CharacterAdded:Wait()
+            local newHrp = newCharacter:WaitForChild("HumanoidRootPart", 5)
+            
+            -- Give the game a moment to load your character (optional but recommended)
+            task.wait(1)
+            
+            if newHrp then
+                -- Teleport your newly spawned character to your last known position
+                newHrp.CFrame = CFrame.new(OriginalPosition)
+                print("Teleported to your last known position:", OriginalPosition)
             else
-                print("Error: Failed to locate HumanoidRootPart after respawn.")
+                print("Error: Could not find new HumanoidRootPart after respawn.")
             end
+            
         else
-            print("Error: Your character is invalid or we have no OriginalPosition yet.")
-        end    
-
+            warn("Error: No current character or HRP found, cannot re.")
+        end
+    
     elseif command:sub(1,5) == "bring" then
         ---------------------------------------------------------------------
         -- bring [name]
@@ -572,9 +578,9 @@ CommandInput.FocusLost:Connect(function(enterPressed)
 
                         print("Teleporting high above the map...")
                         LocalPlayer.Character:SetPrimaryPartCFrame(
-                            LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1000, 0)
+                            LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5000, 0)
                         )
-                        task.wait(1)
+                        task.wait(0.5)
 
                         print("Returning to original position...")
                         if LocalPlayer.Character
@@ -1341,6 +1347,133 @@ if tool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Huma
 else
     warn("Error: No stroller found or missing HumanoidRootPart.")
 end
+
+elseif command == "fix" then
+    ---------------------------------------------------------------------
+    -- fix
+    --   Clears or resets all your known positions to a default state.
+    ---------------------------------------------------------------------
+    
+    -- Set them back to defaults (e.g., (0,0,0) or nil)
+    OriginalPosition = Vector3.new(0,0,0)
+    SomeOtherPosition = Vector3.new(0,0,0)
+    -- ... repeat for any other positional variables
+    
+    print("fix: All known positions have been reset to defaults.")
+
+elseif command:sub(1,2) == "tp" then
+    ---------------------------------------------------------------------
+    -- tp <user1> <user2>
+    -- 1) Save your original pos
+    -- 2) Equip stroller
+    -- 3) Teleport user1 in front, 'grab' them
+    -- 4) Teleport you (and them) to user2
+    -- 5) Drop user1
+    -- 6) Teleport you back
+    ---------------------------------------------------------------------
+
+    -- Split the command by spaces
+    local parts = command:split(" ")
+    if #parts < 3 then
+        warn("Usage: tp <user1> <user2>")
+        return
+    end
+
+    local user1Prefix = parts[2]:lower()
+    local user2Prefix = parts[3]:lower()
+
+    -- Find user1 & user2 by partial name
+    local user1, user2 = nil, nil
+    for _, p in ipairs(Players:GetPlayers()) do
+        local pName = p.Name:lower()
+        local dName = p.DisplayName:lower()
+
+        if not user1 
+           and (pName:sub(1, #user1Prefix) == user1Prefix
+             or dName:sub(1, #user1Prefix) == user1Prefix) then
+            user1 = p
+        end
+        if not user2
+           and (pName:sub(1, #user2Prefix) == user2Prefix
+             or dName:sub(1, #user2Prefix) == user2Prefix) then
+            user2 = p
+        end
+        if user1 and user2 then
+            break
+        end
+    end
+
+    if not user1 then
+        warn("tp: Could not find user1: " .. user1Prefix)
+        return
+    end
+    if not user2 then
+        warn("tp: Could not find user2: " .. user2Prefix)
+        return
+    end
+    if user1 == LocalPlayer then
+        warn("tp: You cannot pick up yourself as user1!")
+        return
+    end
+    if user1 == user2 then
+        warn("tp: user1 and user2 are the same person!")
+        return
+    end
+
+    -- We proceed with the stroller logic if we have:
+    -- 1) A stroller
+    -- 2) Our own character/HRP
+    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+                or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    local myChar = LocalPlayer.Character
+    if not (tool and myChar and myChar:FindFirstChild("HumanoidRootPart")) then
+        warn("tp: Missing stroller or your character is invalid.")
+        return
+    end
+
+    -- user1 must have a char + HRP + Humanoid
+    local c1 = user1.Character
+    if not (c1 and c1:FindFirstChild("HumanoidRootPart") and c1:FindFirstChild("Humanoid")) then
+        warn("tp: user1 missing HRP/Humanoid.")
+        return
+    end
+
+    -- user2 must have a char + HRP
+    local c2 = user2.Character
+    if not (c2 and c2:FindFirstChild("HumanoidRootPart")) then
+        warn("tp: user2 missing HRP.")
+        return
+    end
+
+    -- 1) Save your original position
+    local originalPos = myChar.HumanoidRootPart.CFrame
+
+    -- 2) Equip stroller
+    tool.Parent = myChar
+    myChar.Humanoid:EquipTool(tool)
+    task.wait(0.3)
+
+    -- 3) Teleport user1 in front of you, "grab" them with stroller
+    c1:SetPrimaryPartCFrame(
+        myChar.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+    )
+    task.wait(0.2)
+    tool:Activate()  -- "grab" them
+    task.wait(0.2)
+
+    -- 4) Teleport YOU (and thus them in your stroller) to user2's position
+    local user2Pos = c2.HumanoidRootPart.CFrame
+    print("Teleporting you + user1 to user2’s location...")
+    myChar:SetPrimaryPartCFrame(user2Pos * CFrame.new(0,0,5))
+    task.wait(0.5)
+
+    -- 5) Drop user1 (unequip stroller => user1 is left behind)
+    tool.Parent = LocalPlayer.Backpack
+    print("Dropped user1 at user2's location.")
+
+    -- 6) Teleport you back to original position
+    myChar:SetPrimaryPartCFrame(originalPos)
+    print("Returned you to your original spot.")
 
 -- cmds (toggle command list)
 elseif command == "cmds" then
