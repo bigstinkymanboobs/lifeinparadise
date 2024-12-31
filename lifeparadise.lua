@@ -77,13 +77,16 @@ CommandInput.TextXAlignment = Enum.TextXAlignment.Left
 --------------------------------------
 -- Command List Window (Draggable)
 --------------------------------------
+--------------------------------------
+-- Command List (Scrollable and Dynamic)
+--------------------------------------
 local CommandList = Instance.new("Frame")
 CommandList.Name = "CommandList"
 CommandList.Parent = ScreenGui
 CommandList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 CommandList.BorderSizePixel = 0
 CommandList.Position = UDim2.new(0.5, -200, 0.5, -100)
-CommandList.Size = UDim2.new(0, 400, 0, 200)
+CommandList.Size = UDim2.new(0, 400, 0, 300)
 CommandList.AnchorPoint = Vector2.new(0.5, 0.5)
 CommandList.Visible = false
 CommandList.Active = true
@@ -94,54 +97,71 @@ local CommandListCorner = Instance.new("UICorner")
 CommandListCorner.CornerRadius = UDim.new(0, 10)
 CommandListCorner.Parent = CommandList
 
+-- ScrollingFrame for Dynamic Content
 local CommandListScroll = Instance.new("ScrollingFrame")
 CommandListScroll.Name = "CommandListScroll"
 CommandListScroll.Parent = CommandList
 CommandListScroll.BackgroundTransparency = 1
 CommandListScroll.Size = UDim2.new(1, 0, 1, -30)
-CommandListScroll.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+CommandListScroll.CanvasSize = UDim2.new(0, 0, 0, 0) -- Adjusts dynamically
+CommandListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 CommandListScroll.ScrollBarThickness = 8
 CommandListScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 255)
 CommandListScroll.Position = UDim2.new(0, 0, 0, 0)
 
-local CommandListText = Instance.new("TextLabel")
-CommandListText.Name = "CommandListText"
-CommandListText.Parent = CommandListScroll
-CommandListText.BackgroundTransparency = 1
-CommandListText.Size = UDim2.new(1, -10, 1, 0)
-CommandListText.Font = Enum.Font.SourceSans
-CommandListText.TextColor3 = Color3.fromRGB(255, 255, 255)
-CommandListText.TextSize = 18
-CommandListText.Text = [[
-Available Commands:
-- killgui
-- re
-- noclip
-- clip
-- kill [name]
-- rocket [name]
-- view/unview [name]
-- bring [name]
-- tp <user1> <user2>
-- goto [name]
-- fling [name]
-- jail [name]
-- void [name]
-- skydive [name]
-- annoy/unannoy [name]
-- revealusers/unrevealusers
-- cmds
-]]
-CommandListText.TextWrapped = true
-CommandListText.TextYAlignment = Enum.TextYAlignment.Top
-CommandListText.TextXAlignment = Enum.TextXAlignment.Left
+-- UIListLayout for organized commands
+local CommandListLayout = Instance.new("UIListLayout")
+CommandListLayout.Parent = CommandListScroll
+CommandListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+CommandListLayout.Padding = UDim.new(0, 5)
 
-local CommandListTextPadding = Instance.new("UIPadding")
-CommandListTextPadding.Parent = CommandListText
-CommandListTextPadding.PaddingLeft = UDim.new(0, 10)
-CommandListTextPadding.PaddingRight = UDim.new(0, 10)
-CommandListTextPadding.PaddingTop = UDim.new(0, 10)
+-- Commands as individual labels
+local commands = {
+    "killgui",
+    "re",
+    "fix",
+    "cleanup",
+    "noclip",
+    "clip",
+    "kill [name]",
+    "rocket [name]",
+    "view/unview [name]",
+    "bring [name]",
+    "tp [name1] [name2]",
+    "goto [name]",
+    "fling [name]",
+    "jail [name]",
+    "void [name]",
+    "banlands [name]",
+    "skydive [name]",
+    "fireplace [name]",
+    "highpoint [name]",
+    "annoy/unannoy [name]",
+    "revealusers/unrevealusers",
+    "lag",
+}
 
+for _, cmd in ipairs(commands) do
+    local CommandItem = Instance.new("TextLabel")
+    CommandItem.Parent = CommandListScroll
+    CommandItem.BackgroundTransparency = 1
+    CommandItem.Size = UDim2.new(1, -10, 0, 24)
+    CommandItem.Font = Enum.Font.SourceSans
+    CommandItem.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CommandItem.TextSize = 18
+    CommandItem.Text = "- " .. cmd
+    CommandItem.TextWrapped = false
+    CommandItem.TextXAlignment = Enum.TextXAlignment.Left
+end
+
+-- Padding for CommandListScroll
+local CommandListPadding = Instance.new("UIPadding")
+CommandListPadding.Parent = CommandListScroll
+CommandListPadding.PaddingLeft = UDim.new(0, 10)
+CommandListPadding.PaddingRight = UDim.new(0, 10)
+CommandListPadding.PaddingTop = UDim.new(0, 10)
+
+-- Close Button
 local CommandListClose = Instance.new("TextButton")
 CommandListClose.Name = "CommandListClose"
 CommandListClose.Parent = CommandList
@@ -200,6 +220,7 @@ CommandList.InputEnded:Connect(function(input)
     end
 end)
 
+
 --------------------------------------
 -- Toggle Command Bar with Semicolon
 --------------------------------------
@@ -252,33 +273,42 @@ CommandInput.FocusLost:Connect(function(enterPressed)
         -- re
 
     elseif command == "re" then
-        -- Check if you currently have a character + HRP
+        ---------------------------------------------------------------------
+        -- Reset Character and Return to Original Position (Manual Trigger Only)
+        ---------------------------------------------------------------------
         if LocalPlayer.Character 
            and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            
-            print("Resetting character, then returning to last known position:", OriginalPosition)
-            
-            -- Kill yourself so you respawn
-            LocalPlayer.Character:BreakJoints()
-            
-            -- Wait for the new character model
-            local newCharacter = LocalPlayer.CharacterAdded:Wait()
-            local newHrp = newCharacter:WaitForChild("HumanoidRootPart", 5)
-            
-            -- Give the game a moment to load your character (optional but recommended)
-            task.wait(1)
-            
-            if newHrp then
-                -- Teleport your newly spawned character to your last known position
-                newHrp.CFrame = CFrame.new(OriginalPosition)
-                print("Teleported to your last known position:", OriginalPosition)
-            else
-                print("Error: Could not find new HumanoidRootPart after respawn.")
+            -- Save original position if not already saved
+            if not OriginalPosition then
+                OriginalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+                print("[INFO] Saved original position:", OriginalPosition)
             end
-            
+    
+            -- Flag to indicate manual reset
+            _G.ManualResetFlag = true
+    
+            -- Reset your character
+            print("[INFO] Resetting character manually...")
+            LocalPlayer.Character:BreakJoints()
+    
+            -- Handle respawn manually
+            LocalPlayer.CharacterAdded:Wait()
+            task.wait(1) -- Wait briefly for character stabilization
+    
+            if _G.ManualResetFlag and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                -- Teleport to the saved position
+                LocalPlayer.Character.HumanoidRootPart.CFrame = OriginalPosition
+                print("[SUCCESS] Respawn complete. Returned to original position:", OriginalPosition)
+                
+                -- Clear the saved position and manual flag
+                OriginalPosition = nil
+                _G.ManualResetFlag = false
+            else
+                warn("[ERROR] Failed to teleport after manual respawn. Missing HumanoidRootPart or OriginalPosition.")
+            end
         else
-            warn("Error: No current character or HRP found, cannot re.")
-        end
+            warn("[ERROR] No current character or HumanoidRootPart found. Cannot execute 're' command.")
+        end    
     
     elseif command:sub(1,5) == "bring" then
         ---------------------------------------------------------------------
@@ -427,7 +457,7 @@ CommandInput.FocusLost:Connect(function(enterPressed)
 
                             -- Fling sequence
                             local flingStart = tick()
-                            while (tick() - flingStart) < 5 do
+                            while (tick() - flingStart) < 1 do
                                 LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(
                                     math.random(-5000, 5000),
                                     math.random(-5000, 5000),
@@ -686,202 +716,228 @@ CommandInput.FocusLost:Connect(function(enterPressed)
         -- void [name]
         ---------------------------------------------------------------------
         local targetPrefix = command:sub(6):lower()
-    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
-        or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
-
-    if tool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        -- Save original position in case you respawn or un-equip the stroller
-        local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
-
-        -- Ensure you return to original position after respawn
-        local function onRespawn(character)
-            local hrp = character:WaitForChild("HumanoidRootPart", 5)
-            if hrp then
-                task.wait(1)
-                character:SetPrimaryPartCFrame(originalPosition)
-                print("Respawn detected. Teleported back to original position.")
-            else
-                warn("Failed to teleport back after respawn due to missing HumanoidRootPart.")
-            end
-        end
-        LocalPlayer.CharacterAdded:Connect(onRespawn)
-
-        -- Equip the stroller
-        tool.Parent = LocalPlayer.Character
-        LocalPlayer.Character.Humanoid:EquipTool(tool)
-        task.wait(0.3)
-
-        -- NEW: If the stroller unequips for any reason, instantly snap back
-        tool.Unequipped:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
-                print("Stroller unequipped, teleporting you back immediately.")
-            end
-        end)
-
-        -- Search for the target
-        local found = false
-        for _, player in ipairs(Players:GetPlayers()) do
-            local pName = player.Name:lower()
-            local pDisplay = player.DisplayName:lower()
-
-            if player ~= LocalPlayer
-               and (pName:sub(1, #targetPrefix) == targetPrefix
-               or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
-
-                if player.Character
-                   and player.Character:FindFirstChild("HumanoidRootPart")
-                   and player.Character:FindFirstChild("Humanoid") then
-
-                    found = true
-
-                    -- Teleport player a bit in front of you
-                    player.Character:SetPrimaryPartCFrame(
-                        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
-                    )
-                    task.wait(0.2)
-
-                    -- Activate stroller (so they can be ‘grabbed’)
-                    tool:Activate()
-                    task.wait(0.2)
-
-                    -- Teleport you beneath the map
-                    print("Proceeding to sink beneath the map...")
-                    LocalPlayer.Character:SetPrimaryPartCFrame(
-                        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, -300, 0)
-                    )
+        local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+            or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    
+        if tool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            -- Save original position
+            local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+    
+            -- Ensure return to original position after respawn
+            local respawnConnection
+            respawnConnection = LocalPlayer.CharacterAdded:Connect(function(character)
+                local hrp = character:WaitForChild("HumanoidRootPart", 5)
+                if hrp then
                     task.wait(1)
-
-                    -- Unequip stroller -> triggers the Unequipped event 
-                    tool.Parent = LocalPlayer.Backpack
-                    print("Void command complete; you should be snapped back instantly.")
-                    break
+                    character:SetPrimaryPartCFrame(originalPosition)
+                    print("[INFO] Respawn detected. Returned to original position.")
+                    respawnConnection:Disconnect()
                 else
-                    warn("Error: Target player is missing HumanoidRootPart or Humanoid.")
+                    warn("[ERROR] Respawn failed: Missing HumanoidRootPart.")
+                end
+            end)
+    
+            -- Equip the stroller
+            tool.Parent = LocalPlayer.Character
+            LocalPlayer.Character.Humanoid:EquipTool(tool)
+            task.wait(0.3)
+    
+            -- Handle Unequip event
+            local unequipConnection
+            unequipConnection = tool.Unequipped:Connect(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+                    print("[INFO] Stroller unequipped. Returned to original position.")
+                    unequipConnection:Disconnect()
+                end
+            end)
+    
+            -- Search for the target
+            local found = false
+            for _, player in ipairs(Players:GetPlayers()) do
+                local pName = player.Name:lower()
+                local pDisplay = player.DisplayName:lower()
+    
+                if player ~= LocalPlayer
+                   and (pName:sub(1, #targetPrefix) == targetPrefix
+                   or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+    
+                    if player.Character
+                       and player.Character:FindFirstChild("HumanoidRootPart")
+                       and player.Character:FindFirstChild("Humanoid") then
+    
+                        found = true
+    
+                        -- Teleport target player in front of you
+                        player.Character:SetPrimaryPartCFrame(
+                            LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+                        )
+                        task.wait(0.2)
+    
+                        -- Activate stroller
+                        tool:Activate()
+                        task.wait(0.2)
+    
+                        -- Teleport YOU beneath the map
+                        print("[INFO] Sinking beneath the map...")
+                        LocalPlayer.Character:SetPrimaryPartCFrame(
+                            LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, -300, 0)
+                        )
+                        task.wait(1)
+    
+                        -- Unequip stroller manually
+                        tool.Parent = LocalPlayer.Backpack
+                        if unequipConnection then unequipConnection:Disconnect() end
+                        print("[SUCCESS] Void command completed. Returning to original position.")
+                        break
+                    else
+                        warn("[ERROR] Target player missing HumanoidRootPart or Humanoid.")
+                    end
                 end
             end
-        end
-
-        if not found then
-            print("No matching player found for: " .. targetPrefix)
-        end
-
-    else
-        warn("Error: No stroller found or missing HumanoidRootPart.")
-    end
-
+    
+            if not found then
+                print("[ERROR] No matching player found for: " .. targetPrefix)
+            end
+    
+            -- Final fallback to ensure return to original position
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+            end
+    
+            -- Cleanup: Disconnect connections to avoid memory leaks
+            if respawnConnection then respawnConnection:Disconnect() end
+            if unequipConnection then unequipConnection:Disconnect() end
+        else
+            warn("[ERROR] Missing stroller or HumanoidRootPart.")
+        end    
+    
     elseif command:sub(1,4) == "jail" then
         ---------------------------------------------------------------------
         -- jail [name]
         ---------------------------------------------------------------------
         local targetPrefix = command:sub(6):lower()
-
-    -- The "jail" location: 
-    local jailCFrame = CFrame.new(
-        -679.82431, 38.99998, 165.757706, 
-        -0.551903725, -4.11753334e-08, 0.833907843,
-        -5.06281062e-08, 1, 3.34608785e-08,
-        -0.833907843, -5.06281062e-08, -0.551903725
-    )
-
-    -- Make sure your character exists
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        warn("Error: Your character is invalid or missing HumanoidRootPart.")
-        return
-    end
-
-    -- Store your original position
-    local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
-
-    -- Find the stroller
-    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
-                or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
-    if not tool then
-        warn("Error: No 'Stroller' gear found in your backpack/character.")
-        return
-    end
-
-    -- Equip stroller if not already
-    if tool.Parent ~= LocalPlayer.Character then
-        tool.Parent = LocalPlayer.Character
-        LocalPlayer.Character.Humanoid:EquipTool(tool)
-        task.wait(0.3)
-    end
-
-    -- Teleport YOU to jail coords
-    LocalPlayer.Character:SetPrimaryPartCFrame(jailCFrame)
-    task.wait(0.3)
-
-    -- Find target player
-    local foundPlayer = nil
-    for _, player in pairs(Players:GetPlayers()) do
-        local pName = player.Name:lower()
-        local pDisplay = player.DisplayName:lower()
-        if player ~= LocalPlayer
-           and (pName:sub(1, #targetPrefix) == targetPrefix
-           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
-            foundPlayer = player
-            break
+    
+        -- The "jail" location: 
+        local jailCFrame = CFrame.new(
+            -679.82431, 38.99998, 165.757706, 
+            -0.551903725, -4.11753334e-08, 0.833907843,
+            -5.06281062e-08, 1, 3.34608785e-08,
+            -0.833907843, -5.06281062e-08, -0.551903725
+        )
+    
+        -- Make sure your character exists
+        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            warn("[ERROR] Your character is invalid or missing HumanoidRootPart.")
+            return
         end
-    end
-
-    if not foundPlayer then
-        print("No matching player found for: " .. targetPrefix)
-        return
-    end
-
-    -- Make sure target has a valid character
-    local targetChar = foundPlayer.Character
-    if not targetChar 
-       or not targetChar:FindFirstChild("HumanoidRootPart") 
-       or not targetChar:FindFirstChild("Humanoid") then
-        warn("Target missing Character/HumanoidRootPart/Humanoid.")
-        return
-    end
-
-    -- Teleport the target in front of you (at the jail location)
-    targetChar:SetPrimaryPartCFrame(
-        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
-    )
-    task.wait(0.3)
-
-    -- Activate stroller so they can sit
-    print("Activating stroller for jail command...")
-    tool:Activate()
-    task.wait(0.3)
-
-    -- Wait up to 5s for them to sit
-    local seatTimeout = 5
-    local seatDetected = false
-    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
-    if targetHumanoid then
-        print("Waiting up to "..seatTimeout.." seconds for target to sit...")
-
-        local startTime = tick()
-        while (tick() - startTime) < seatTimeout do
-            if targetHumanoid.Sit == true then
-                seatDetected = true
+    
+        -- Store your original position
+        local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+    
+        -- Find the stroller
+        local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+                    or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+        if not tool then
+            warn("[ERROR] No 'Stroller' gear found in your backpack/character.")
+            return
+        end
+    
+        -- Equip stroller if not already
+        if tool.Parent ~= LocalPlayer.Character then
+            tool.Parent = LocalPlayer.Character
+            LocalPlayer.Character.Humanoid:EquipTool(tool)
+            task.wait(0.3)
+        end
+    
+        -- Handle Unequip event
+        local unequipConnection
+        unequipConnection = tool.Unequipped:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+                print("[INFO] Stroller unequipped. Returned to original position.")
+                unequipConnection:Disconnect()
+            end
+        end)
+    
+        -- Teleport YOU to jail coords
+        LocalPlayer.Character:SetPrimaryPartCFrame(jailCFrame)
+        task.wait(0.3)
+    
+        -- Find target player
+        local foundPlayer = nil
+        for _, player in pairs(Players:GetPlayers()) do
+            local pName = player.Name:lower()
+            local pDisplay = player.DisplayName:lower()
+            if player ~= LocalPlayer
+               and (pName:sub(1, #targetPrefix) == targetPrefix
+               or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+                foundPlayer = player
                 break
             end
-            task.wait(0.2)
         end
-    end
-
-    if seatDetected then
-        print("Target is now seated in jail. Teleporting you back home...")
-    else
-        print("Target never sat. We'll still leave them here at jail. Teleporting you back...")
-    end
-
-    -- Teleport YOU back to original position
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
-        -- Optionally un-equip the stroller
-        tool.Parent = LocalPlayer.Backpack
-        print("You're back at your original location. Target remains in jail.")
-    else
-        warn("Error: Missing your HumanoidRootPart upon final return.")
-    end
+    
+        if not foundPlayer then
+            warn("[ERROR] No matching player found for: " .. targetPrefix)
+            return
+        end
+    
+        -- Make sure target has a valid character
+        local targetChar = foundPlayer.Character
+        if not targetChar 
+           or not targetChar:FindFirstChild("HumanoidRootPart") 
+           or not targetChar:FindFirstChild("Humanoid") then
+            warn("[ERROR] Target missing Character/HumanoidRootPart/Humanoid.")
+            return
+        end
+    
+        -- Teleport the target in front of you (at the jail location)
+        targetChar:SetPrimaryPartCFrame(
+            LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+        )
+        task.wait(0.2)
+    
+        -- Activate stroller so they can sit
+        print("[INFO] Activating stroller for jail command...")
+        tool:Activate()
+        task.wait(0.3)
+    
+        -- Wait up to 5s for them to sit
+        local seatTimeout = 5
+        local seatDetected = false
+        local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+        if targetHumanoid then
+            print("[INFO] Waiting up to " .. seatTimeout .. " seconds for target to sit...")
+    
+            local startTime = tick()
+            while (tick() - startTime) < seatTimeout do
+                if targetHumanoid.Sit == true then
+                    seatDetected = true
+                    break
+                end
+                task.wait(0.2)
+            end
+        end
+    
+        if seatDetected then
+            print("[SUCCESS] Target is now seated in jail. Teleporting you back home...")
+        else
+            print("[WARNING] Target never sat. Leaving them in jail. Teleporting you back...")
+        end
+    
+        -- Teleport YOU back to original position
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+            -- Unequip the stroller manually
+            tool.Parent = LocalPlayer.Backpack
+            if unequipConnection then unequipConnection:Disconnect() end
+            print("[SUCCESS] You're back at your original location. Target remains in jail.")
+        else
+            warn("[ERROR] Missing your HumanoidRootPart upon final return.")
+        end
+    
+        -- Final cleanup to ensure event disconnection
+        if unequipConnection then unequipConnection:Disconnect() end    
 
     elseif command:sub(1,6) == "rocket" then
         ---------------------------------------------------------------------
@@ -1071,39 +1127,43 @@ CommandInput.FocusLost:Connect(function(enterPressed)
 	
 		print("Collisions re-enabled. You can no longer walk through walls.")
         
-    -- banlands [name] (teleports player to the banlands altitude)
+-- banlands [name] (teleports player to the banlands altitude)
+
 elseif command:sub(1,8) == "banlands" then
     local targetPrefix = command:sub(10):lower()
     local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
                 or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
 
     if tool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        -- Save original position in case you respawn or un-equip the stroller
+        -- Save original position
         local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
 
-        -- Ensure you return to original position after respawn
-        local function onRespawn(character)
+        -- Ensure return to original position after respawn
+        local respawnConnection
+        respawnConnection = LocalPlayer.CharacterAdded:Connect(function(character)
             local hrp = character:WaitForChild("HumanoidRootPart", 5)
             if hrp then
                 task.wait(1)
                 character:SetPrimaryPartCFrame(originalPosition)
-                print("Respawn detected. Teleported back to original position.")
+                print("[INFO] Respawn detected. Returned to original position.")
+                respawnConnection:Disconnect()
             else
-                warn("Failed to teleport back after respawn due to missing HumanoidRootPart.")
+                warn("[ERROR] Failed to teleport back after respawn due to missing HumanoidRootPart.")
             end
-        end
-        LocalPlayer.CharacterAdded:Connect(onRespawn)
+        end)
 
         -- Equip the stroller
         tool.Parent = LocalPlayer.Character
         LocalPlayer.Character.Humanoid:EquipTool(tool)
         task.wait(0.3)
 
-        -- NEW: If the stroller unequips for any reason, instantly snap back
-        tool.Unequipped:Connect(function()
+        -- Handle Unequip event
+        local unequipConnection
+        unequipConnection = tool.Unequipped:Connect(function()
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
-                print("Stroller unequipped, teleporting you back immediately.")
+                print("[INFO] Stroller unequipped. Returned to original position.")
+                unequipConnection:Disconnect()
             end
         end)
 
@@ -1123,39 +1183,44 @@ elseif command:sub(1,8) == "banlands" then
 
                     found = true
 
-                    -- Teleport player a bit in front of you
+                    -- Teleport target player in front of you
                     player.Character:SetPrimaryPartCFrame(
                         LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
                     )
                     task.wait(0.2)
 
-                    -- Activate stroller (so they can be ‘grabbed’)
+                    -- Activate stroller (to ensure they are grabbed)
                     tool:Activate()
                     task.wait(0.2)
 
-                    -- Teleport you to the banlands altitude (e.g., Y = 3000)
-                    print("Proceeding to teleport to the banlands altitude...")
+                    -- Teleport YOU to banlands altitude
+                    print("[INFO] Teleporting to banlands altitude...")
                     LocalPlayer.Character:SetPrimaryPartCFrame(
-                        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 100000000, 0)
+                        CFrame.new(0, 100000000, 0)
                     )
                     task.wait(1)
 
-                    -- Unequip stroller -> triggers the Unequipped event 
+                    -- Unequip stroller to trigger return
                     tool.Parent = LocalPlayer.Backpack
-                    print("Banlands command complete; you should be snapped back instantly.")
+                    unequipConnection:Disconnect()
+                    print("[SUCCESS] Banlands command completed. Returning to original position.")
                     break
                 else
-                    warn("Error: Target player is missing HumanoidRootPart or Humanoid.")
+                    warn("[ERROR] Target player missing HumanoidRootPart or Humanoid.")
                 end
             end
         end
 
         if not found then
-            print("No matching player found for: " .. targetPrefix)
+            print("[ERROR] No matching player found for: " .. targetPrefix)
         end
 
+        -- Final fallback to ensure return to original position
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+        end
     else
-        warn("Error: No stroller found or missing HumanoidRootPart.")
+        warn("[ERROR] Missing stroller or HumanoidRootPart.")
     end
 
     -- Variables for the annoy command
@@ -1264,89 +1329,94 @@ elseif command:sub(1,4) == "kill" then
     -- kill [name]
     ---------------------------------------------------------------------
     local targetPrefix = command:sub(6):lower()
-local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
-    or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+        or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
 
-if tool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-    -- Save original position in case you respawn or un-equip the stroller
-    local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+    if tool 
+       and LocalPlayer.Character 
+       and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
 
-    -- Ensure you return to original position after respawn
-    local function onRespawn(character)
-        local hrp = character:WaitForChild("HumanoidRootPart", 5)
-        if hrp then
-            task.wait(1)
-            character:SetPrimaryPartCFrame(originalPosition)
-            print("Respawn detected. Teleported back to original position.")
-        else
-            warn("Failed to teleport back after respawn due to missing HumanoidRootPart.")
-        end
-    end
-    LocalPlayer.CharacterAdded:Connect(onRespawn)
+        -- Store your original position
+        local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
 
-    -- Equip the stroller
-    tool.Parent = LocalPlayer.Character
-    LocalPlayer.Character.Humanoid:EquipTool(tool)
-    task.wait(0.3)
+        -- Equip the stroller
+        tool.Parent = LocalPlayer.Character
+        LocalPlayer.Character.Humanoid:EquipTool(tool)
+        task.wait(0.3)
 
-    -- NEW: If the stroller unequips for any reason, instantly snap back
-    tool.Unequipped:Connect(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
-            print("Stroller unequipped, teleporting you back immediately.")
-        end
-    end)
+        -- Handle Unequip event for safety
+        local unequipConnection
+        unequipConnection = tool.Unequipped:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+                print("[INFO] Stroller unequipped. Returned to original position.")
+                unequipConnection:Disconnect()
+            end
+        end)
 
-    -- Search for the target
-    local found = false
-    for _, player in ipairs(Players:GetPlayers()) do
-        local pName = player.Name:lower()
-        local pDisplay = player.DisplayName:lower()
+        -- Search for the target
+        local found = false
+        for _, player in ipairs(Players:GetPlayers()) do
+            local pName = player.Name:lower()
+            local pDisplay = player.DisplayName:lower()
 
-        if player ~= LocalPlayer
-           and (pName:sub(1, #targetPrefix) == targetPrefix
-           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+            if player ~= LocalPlayer
+               and (pName:sub(1, #targetPrefix) == targetPrefix
+               or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
 
-            if player.Character
-               and player.Character:FindFirstChild("HumanoidRootPart")
-               and player.Character:FindFirstChild("Humanoid") then
+                if player.Character
+                   and player.Character:FindFirstChild("HumanoidRootPart")
+                   and player.Character:FindFirstChild("Humanoid") then
 
-                found = true
+                    found = true
 
-                -- Teleport player a bit in front of you
-                player.Character:SetPrimaryPartCFrame(
-                    LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
-                )
-                task.wait(0.2)
+                    -- Save the target's current position BEFORE "killing" them (optional)
+                    local targetHRP = player.Character.HumanoidRootPart
+                    local positionBeforeKill = targetHRP.CFrame
+                    _G.LastPreKillPosition = positionBeforeKill
 
-                -- Activate stroller (so they can be ‘grabbed’)
-                tool:Activate()
-                task.wait(0.2)
+                    -- Teleport target a bit in front of you
+                    player.Character:SetPrimaryPartCFrame(
+                        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+                    )
+                    task.wait(0.2)
 
-                -- Teleport you beneath the map
-                print("Proceeding to kill...")
-                LocalPlayer.Character:SetPrimaryPartCFrame(
-                    LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, -480, 0)
-                )
-                task.wait(0.3)
+                    -- Activate stroller (so they can be 'grabbed')
+                    tool:Activate()
+                    task.wait(0.2)
 
-                -- Unequip stroller -> triggers the Unequipped event 
-                tool.Parent = LocalPlayer.Backpack
-                print("Void command complete; you should be snapped back instantly.")
-                break
-            else
-                warn("Error: Target player is missing HumanoidRootPart or Humanoid.")
+                    -- Teleport YOU beneath the map
+                    print("[INFO] Proceeding to kill...")
+                    LocalPlayer.Character:SetPrimaryPartCFrame(
+                        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, -480, 0)
+                    )
+                    task.wait(0.25)
+
+                    -- Unequip stroller
+                    tool.Parent = LocalPlayer.Backpack
+                    unequipConnection:Disconnect()
+
+                    -- Ensure proper return to original position
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+                        print("[SUCCESS] Kill command completed. Returned to original position.")
+                    else
+                        warn("[ERROR] Failed to return to original position after kill command.")
+                    end
+                    break
+                else
+                    warn("[ERROR] Target player is missing HumanoidRootPart or Humanoid.")
+                end
             end
         end
-    end
 
-    if not found then
-        print("No matching player found for: " .. targetPrefix)
-    end
+        if not found then
+            print("[ERROR] No matching player found for: " .. targetPrefix)
+        end
 
-else
-    warn("Error: No stroller found or missing HumanoidRootPart.")
-end
+    else
+        warn("[ERROR] Missing stroller or HumanoidRootPart.")
+    end
 
 elseif command == "fix" then
     ---------------------------------------------------------------------
@@ -1591,10 +1661,10 @@ elseif command:sub(1,9) == "fireplace" then
     local targetPrefix = command:sub(11):lower()
 
     local highpointCFrame = CFrame.new(
-    -803.933228, 38.9999542, -107.746033,
-    0.999602377, -1.14626758e-07, 0.0281969551,
-    1.14982647e-07, 1, 1.0999325e-08,
-    -0.0281969551, 1.42377194e-08, 0.999602377
+    -138.025406, 40.4750977, -206.529129,
+    -0.000784904696, -0.144901007, -0.989445865,
+    -0.00690736901, 0.989423335, -0.144892231,
+    0.99997586, 0.00672074081, -0.00177748781
 )
 
     -- Make sure your character exists
@@ -1695,6 +1765,521 @@ elseif command:sub(1,9) == "fireplace" then
     else
         warn("Error: Missing your HumanoidRootPart upon final return.")
     end
+
+    ---------------------------------------------------------------------
+-- Example: "cleanup" command to undo script changes
+---------------------------------------------------------------------
+elseif command:sub(1,7) == "cleanup" then
+    -- 1) Disconnect any relevant connections you made
+    --    (If your script stored them in a table called 'Connections')
+    if Connections then
+        for _, conn in ipairs(Connections) do
+            if conn.Connected then
+                conn:Disconnect()
+            end
+        end
+        Connections = {}
+    end
+
+    -- 2) Reset your Humanoid, if desired
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then
+            -- Re-enable "Dead" state in case you disabled it
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+            -- Let joints break on death again
+            hum.BreakJointsOnDeath = true
+            -- Return health to normal
+            hum.MaxHealth = 100
+            hum.Health = hum.MaxHealth
+        end
+    end
+
+    -- 3) Destroy or remove any leftover Strollers, if you want
+    --    (In Character or Backpack)
+    local function destroyIfExists(obj)
+        if obj and obj.Parent then
+            obj:Destroy()
+        end
+    end
+
+    if char then
+        destroyIfExists(char:FindFirstChild("Stroller"))
+    end
+    destroyIfExists(LocalPlayer.Backpack:FindFirstChild("Stroller"))
+
+    -- 4) Clear any stored global positions or variables
+    _G.LastPreKillPosition = nil
+    _G.SomeOtherGlobal = nil
+    -- etc.
+
+    print("Cleanup complete: reverted script effects without rejoining.")
+
+elseif command:sub(1,3) == "sit" then
+    -- Usage Example: "sit bob"
+    local targetPrefix = command:match("^sit%s+(%S+)")
+    if not targetPrefix then
+        warn("Error: No username provided after 'sit'")
+        return
+    end
+
+    -- Find the target player
+    local targetPlayer = nil
+    for _, player in ipairs(Players:GetPlayers()) do
+        local pName = player.Name:lower()
+        local pDisplay = player.DisplayName:lower()
+        if player ~= LocalPlayer
+           and (pName:sub(1, #targetPrefix) == targetPrefix
+           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+            targetPlayer = player
+            break
+        end
+    end
+
+    if not targetPlayer then
+        warn("Error: Could not find player matching '" .. targetPrefix .. "'")
+        return
+    end
+
+    -- Check if the target has a torso (R6)
+    local targetChar = targetPlayer.Character
+    if not targetChar then
+        warn("Error: Target player has no character.")
+        return
+    end
+
+    local torso = targetChar:FindFirstChild("Torso")
+    if not torso then
+        warn("Error: Target is missing 'Torso'.")
+        return
+    end
+
+    -- Ensure your character is valid
+    local yourChar = LocalPlayer.Character
+    if not yourChar then
+        warn("Error: Your character does not exist.")
+        return
+    end
+
+    local yourHum = yourChar:FindFirstChild("Humanoid")
+    local yourHRP = yourChar:FindFirstChild("HumanoidRootPart")
+    if not (yourHum and yourHRP) then
+        warn("Error: Your character is missing Humanoid or HumanoidRootPart.")
+        return
+    end
+
+    ------------------------------------------------
+    -- 1) Calculate the position at foot level in front of the target
+    ------------------------------------------------
+    local targetPosition = torso.CFrame * CFrame.new(0, -2.5, -2) -- Adjust Y and Z offsets for foot level
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {workspace.Terrain, targetChar}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    -- Raycast to find the floor in front of the target
+    local raycastResult = workspace:Raycast(targetPosition.Position, Vector3.new(0, -10, 0), raycastParams)
+    if raycastResult then
+        targetPosition = CFrame.new(raycastResult.Position) * CFrame.new(0, 0.5, 0) -- Adjust Y offset for seating
+    else
+        warn("Error: Could not find the floor in front of the target.")
+        return
+    end
+
+    ------------------------------------------------
+    -- 2) Create a Seat at foot level in front of the target
+    ------------------------------------------------
+    local seat = Instance.new("Seat")
+    seat.Name = "FootSeat"
+    seat.Size = Vector3.new(2, 1, 2)
+    seat.Anchored = false -- Allow the seat to move with the target
+    seat.CanCollide = true
+    seat.Transparency = 1 -- Make the seat invisible
+    seat.TopSurface = Enum.SurfaceType.Smooth
+    seat.BottomSurface = Enum.SurfaceType.Smooth
+    seat.CFrame = targetPosition
+    seat.Parent = workspace
+
+    ------------------------------------------------
+    -- 3) Attach the seat to the target's torso
+    ------------------------------------------------
+    local weld = Instance.new("WeldConstraint")
+    weld.Name = "SeatWeld"
+    weld.Part0 = seat
+    weld.Part1 = torso
+    weld.Parent = seat
+
+    ------------------------------------------------
+    -- 4) Force your character to sit on the seat
+    ------------------------------------------------
+    -- Teleport your character to the seat
+    yourHRP.CFrame = seat.CFrame * CFrame.new(0, 0.5, 0) -- Adjust Y offset to sit properly
+    task.wait(0.1) -- Wait briefly to ensure teleportation
+
+    -- Sit on the seat
+    seat:Sit(yourHum)
+    task.wait(0.5) -- Give Roblox time to register seating
+
+    -- Ensure you're seated; fallback teleport to seat if needed
+    if yourHum.Sit ~= true then
+        yourHRP.CFrame = seat.CFrame * CFrame.new(0, 1.5, 0)
+        seat:Sit(yourHum)
+        print("Manually adjusted position to ensure seating.")
+    end
+
+    print("You are now seated at foot level in front of " .. targetPlayer.Name .. ".")
+
+    ------------------------------------------------
+    -- 5) Cleanup when done
+    ------------------------------------------------
+    -- Destroy the seat when your character stands up
+    yourHum:GetPropertyChangedSignal("Sit"):Connect(function()
+        if yourHum.Sit == false then
+            seat:Destroy()
+            print("Seat cleaned up.")
+        end
+    end)
+
+    elseif command:sub(1,3) == "lag" then
+    -- Execute the lag script
+    game:GetService'RunService'.RenderStepped:Connect(function()
+        task.spawn(function() -- prevent blocking frame render
+            for i = 0, 1000, 1 do
+                -- Script generated by SimpleSpy - credits to exx#9394
+                local args = {
+                    [1] = {
+                        [1] = "Wear",
+                        [2] = "11297746",
+                        [3] = "Hats"
+                    }
+                }
+                game:GetService("ReplicatedStorage").WearItem:FireServer(unpack(args))
+            end
+        end)
+    end)
+    print("Lag command executed.")
+
+elseif command:sub(1,4) == "bang" then
+    ---------------------------------------------------------------------
+    -- bang [name] (R6 ONLY)
+    ---------------------------------------------------------------------
+    local targetPrefix = command:sub(6):lower()
+    
+    -- ✅ STEP 1: Validate LocalPlayer's Character & R6 Rig
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Torso") then
+        warn("[ERROR] Your character is either invalid or not using the R6 rig.")
+        return
+    end
+    print("[DEBUG] Your character is valid and using R6.")
+
+    local humanoid = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid then
+        warn("[ERROR] Your humanoid was not found.")
+        return
+    end
+
+    -- ✅ STEP 2: Load R6 Animation
+    local animator = humanoid:FindFirstChild("Animator") or humanoid
+    if not animator then
+        warn("[ERROR] Animator not found in your humanoid.")
+        return
+    end
+
+    local bangAnim = Instance.new("Animation")
+    bangAnim.AnimationId = "rbxassetid://148840371" -- R6 Animation Only
+    local bang = animator:LoadAnimation(bangAnim)
+    if not bang then
+        warn("[ERROR] Failed to load R6 animation.")
+        return
+    end
+
+    bang:Play(0.1, 1, 1)
+    bang:AdjustSpeed(3) -- Default speed for animation
+    print("[DEBUG] Animation started successfully.")
+
+    -- ✅ STEP 3: Handle Death Cleanup
+    bangDied = humanoid.Died:Connect(function()
+        bang:Stop()
+        bangAnim:Destroy()
+        bangDied:Disconnect()
+        if bangLoop then
+            bangLoop:Disconnect()
+        end
+        print("[DEBUG] Animation stopped due to death.")
+    end)
+
+    -- ✅ STEP 4: Handle Attachment to Target (If a Player is Specified)
+    if targetPrefix and targetPrefix ~= "" then
+        local foundPlayer
+        for _, player in ipairs(Players:GetPlayers()) do
+            local pName = player.Name:lower()
+            local pDisplay = player.DisplayName:lower()
+            if player ~= LocalPlayer
+                and (pName:sub(1, #targetPrefix) == targetPrefix
+                or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+
+                foundPlayer = player
+                break
+            end
+        end
+
+        if not foundPlayer then
+            warn("[ERROR] No R6 player found matching: " .. targetPrefix)
+            return
+        end
+        print("[DEBUG] Found player: " .. foundPlayer.Name)
+
+        local targetChar = foundPlayer.Character
+        if not targetChar or not targetChar:FindFirstChild("Torso") then
+            warn("[ERROR] Target player is not using the R6 rig or lacks a Torso.")
+            return
+        end
+
+        local targetTorso = targetChar:FindFirstChild("Torso")
+        local speakerTorso = LocalPlayer.Character:FindFirstChild("Torso")
+        if not targetTorso or not speakerTorso then
+            warn("[ERROR] Missing Torso on target or your character.")
+            return
+        end
+
+        local bangOffset = CFrame.new(0, 0, 1.1)
+        bangLoop = RunService.Stepped:Connect(function()
+            pcall(function()
+                if targetTorso and speakerTorso then
+                    speakerTorso.CFrame = targetTorso.CFrame * bangOffset
+                end
+            end)
+        end)
+
+        print("[SUCCESS] You are now following " .. foundPlayer.Name .. ". Type 'unbang' to stop.")
+    else
+        print("[SUCCESS] Animation played without a target. Type 'unbang' to stop.")
+    end
+
+elseif command == "unbang" then
+    ---------------------------------------------------------------------
+    -- unbang (R6 ONLY) - Stop Animation & Detach Cleanly
+    ---------------------------------------------------------------------
+    if bang then 
+        pcall(function() bang:Stop() end)
+        bang = nil
+    end
+
+    if bangAnim then 
+        pcall(function() bangAnim:Destroy() end)
+        bangAnim = nil
+    end
+
+    if bangDied then 
+        pcall(function() bangDied:Disconnect() end)
+        bangDied = nil
+    end
+
+    if bangLoop then 
+        pcall(function() bangLoop:Disconnect() end)
+        bangLoop = nil
+    end
+
+    -- Ensure LocalPlayer is reset to prevent attachment errors
+    local speakerTorso = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Torso")
+    if speakerTorso then
+        pcall(function()
+            speakerTorso.Anchored = false
+        end)
+    end
+
+    -- Explicitly stop any playing animation
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+    if humanoid then
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation.AnimationId == "rbxassetid://148840371" then
+                pcall(function() 
+                    track:Stop()
+                end)
+                print("[DEBUG] Found and stopped the bang animation track.")
+            end
+        end
+    end
+
+    print("[SUCCESS] 'bang' command stopped. Animation and attachment cleared.")
+
+elseif command == "coords" then
+    ---------------------------------------------------------------------
+    -- copycframe - Copies your character's current CFrame
+    ---------------------------------------------------------------------
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        warn("Error: Your character or HumanoidRootPart is missing.")
+        return
+    end
+
+    local hrp = LocalPlayer.Character.HumanoidRootPart
+    local cframe = hrp.CFrame
+
+    -- Extract CFrame components
+    local px, py, pz, r00, r01, r02, r10, r11, r12, r20, r21, r22 = cframe:GetComponents()
+
+    -- Format CFrame as a string
+    local cframeString = string.format(
+        "CFrame.new(%.2f, %.2f, %.2f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f)", 
+        px, py, pz,
+        r00, r01, r02,
+        r10, r11, r12,
+        r20, r21, r22
+    )
+
+    -- Copy to clipboard
+    setclipboard(cframeString)
+    print("[SUCCESS] CFrame copied to clipboard: " .. cframeString)
+
+elseif command:sub(1,3) == "sex" then
+   
+    local targetPrefix = command:sub(5):lower()
+
+    local highpointCFrame = CFrame.new(
+    -460.61, 77.84, -126.20,
+    -0.00872, -0.00000, -0.99996,
+    0.00000, 1.00000, -0.00000,
+    0.99996, -0.00000, -0.00872
+)
+
+    -- Make sure your character exists
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        warn("Error: Your character is invalid or missing HumanoidRootPart.")
+        return
+    end
+
+    -- Find the stroller
+    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+                or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    if not tool then
+        warn("Error: No 'Stroller' gear found in your backpack/character.")
+        return
+    end
+
+    -- Equip stroller if not already
+    if tool.Parent ~= LocalPlayer.Character then
+        tool.Parent = LocalPlayer.Character
+        LocalPlayer.Character.Humanoid:EquipTool(tool)
+        task.wait(0.3)
+    end
+
+    -- Teleport YOU to highpoint coords
+    LocalPlayer.Character:SetPrimaryPartCFrame(highpointCFrame)
+    task.wait(0.3)
+
+    -- Find target player
+    local foundPlayer = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        local pName = player.Name:lower()
+        local pDisplay = player.DisplayName:lower()
+        if player ~= LocalPlayer
+           and (pName:sub(1, #targetPrefix) == targetPrefix
+           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+            foundPlayer = player
+            break
+        end
+    end
+
+    if not foundPlayer then
+        print("No matching player found for: " .. targetPrefix)
+        return
+    end
+
+    -- Make sure target has a valid character
+    local targetChar = foundPlayer.Character
+    if not targetChar 
+       or not targetChar:FindFirstChild("HumanoidRootPart") 
+       or not targetChar:FindFirstChild("Humanoid") then
+        warn("Target missing Character/HumanoidRootPart/Humanoid.")
+        return
+    end
+
+    -- Teleport the target to a position directly in front of you
+    targetChar:SetPrimaryPartCFrame(
+        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -4)
+    )
+    task.wait(0.3)
+
+    -- Activate stroller so they can sit
+    print("Activating stroller for highpoint command...")
+    tool:Activate()
+    task.wait(0.3)
+
+    -- Unequip the stroller immediately
+    tool.Parent = LocalPlayer.Backpack
+    print("Stroller unequipped.")
+
+    -- Wait up to 5s for them to sit
+    local seatTimeout = 1
+    local seatDetected = false
+    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+    if targetHumanoid then
+        print("Waiting up to "..seatTimeout.." seconds for target to sit...")
+
+        local startTime = tick()
+        while (tick() - startTime) < seatTimeout do
+            if targetHumanoid.Sit == true then
+                seatDetected = true
+                break
+            end
+            task.wait(0.2)
+        end
+    end
+
+    if seatDetected then
+        print("Target is now seated at highpoint.")
+    else
+        print("Target never sat. We'll still leave them here at highpoint.")
+    end
+
+    -- Transition to bang script
+    print("[INFO] Transitioning to bang script...")
+    
+    -- Bang Script (Run on YOU, Face Target's Head)
+    local humanoid = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid then
+        warn("[ERROR] Your humanoid was not found.")
+        return
+    end
+
+    local animator = humanoid:FindFirstChild("Animator") or humanoid
+    if not animator then
+        warn("[ERROR] Animator not found in your humanoid.")
+        return
+    end
+
+    local bangAnim = Instance.new("Animation")
+    bangAnim.AnimationId = "rbxassetid://148840371"
+    local bang = animator:LoadAnimation(bangAnim)
+    if not bang then
+        warn("[ERROR] Failed to load R6 animation.")
+        return
+    end
+
+    bang:Play(0.1, 1, 1)
+    bang:AdjustSpeed(3)
+
+    bangLoop = RunService.Stepped:Connect(function()
+        pcall(function()
+            if targetChar and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(
+                    targetChar.HumanoidRootPart.Position + Vector3.new(0, 0, -1.5),
+                    targetChar.HumanoidRootPart.Position
+                )
+            end
+        end)
+    end)
+
+    bangDied = humanoid.Died:Connect(function()
+        bang:Stop()
+        bangAnim:Destroy()
+        bangDied:Disconnect()
+        if bangLoop then
+            bangLoop:Disconnect()
+        end
+    end)
+
+    print("[SUCCESS] Animation playing on you, facing the target's head.")
 
 -- cmds (toggle command list)
 elseif command == "cmds" then
