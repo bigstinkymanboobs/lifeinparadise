@@ -75,9 +75,6 @@ CommandInput.PlaceholderText = "Enter Command..."
 CommandInput.TextXAlignment = Enum.TextXAlignment.Left
 
 --------------------------------------
--- Command List Window (Draggable)
---------------------------------------
---------------------------------------
 -- Command List (Scrollable and Dynamic)
 --------------------------------------
 local CommandList = Instance.new("Frame")
@@ -122,6 +119,7 @@ local commands = {
     "fix",
     "cleanup",
     "noclip",
+    "fly/unfly",
     "clip",
     "kill [name]",
     "rocket [name]",
@@ -236,7 +234,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Strip semicolons if they sneak in
+-- Prevent accidental semicolons in input
 CommandInput:GetPropertyChangedSignal("Text"):Connect(function()
     local txt = CommandInput.Text
     if #txt > 0 and txt:sub(-1) == ";" then
@@ -250,8 +248,15 @@ end)
 CommandInput.FocusLost:Connect(function(enterPressed)
     if not enterPressed then return end
 
-    local command = CommandInput.Text
-    CommandInput.Text = ""
+    local command = CommandInput.Text:lower():gsub("^%s*(.-)%s*$", "%1") -- Trim spaces and lowercase
+    CommandInput.Text = "" -- Clear input box after command is processed
+
+    if command == "" then
+        CommandBar.Visible = false
+        CommandInput:ReleaseFocus()
+        return
+    end
+
     print("Command Entered: " .. command)
 
     --==[ START OF THE SINGLE IF-ELSEIF CHAIN ]==--
@@ -276,8 +281,7 @@ CommandInput.FocusLost:Connect(function(enterPressed)
         ---------------------------------------------------------------------
         -- Reset Character and Return to Original Position (Manual Trigger Only)
         ---------------------------------------------------------------------
-        if LocalPlayer.Character 
-           and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             -- Save original position if not already saved
             if not OriginalPosition then
                 OriginalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
@@ -295,7 +299,13 @@ CommandInput.FocusLost:Connect(function(enterPressed)
             LocalPlayer.CharacterAdded:Wait()
             task.wait(1) -- Wait briefly for character stabilization
     
+            -- Verify and restore position after respawn
             if _G.ManualResetFlag and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                -- Ensure OriginalPosition is a CFrame
+                if typeof(OriginalPosition) == "Vector3" then
+                    OriginalPosition = CFrame.new(OriginalPosition)
+                end
+    
                 -- Teleport to the saved position
                 LocalPlayer.Character.HumanoidRootPart.CFrame = OriginalPosition
                 print("[SUCCESS] Respawn complete. Returned to original position:", OriginalPosition)
@@ -2281,6 +2291,254 @@ elseif command:sub(1,3) == "sex" then
 
     print("[SUCCESS] Animation playing on you, facing the target's head.")
 
+elseif command == "fly" then
+    ---------------------------------------------------------------------
+    -- fly [speed]
+    ---------------------------------------------------------------------
+    local speed = tonumber(command:sub(5)) or 50 -- Default speed if not specified
+    local player = LocalPlayer
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+    if not character or not humanoid or not hrp then
+        warn("[ERROR] Character, Humanoid, or HumanoidRootPart is missing.")
+        return
+    end
+
+    -- Setup fly controls
+    local flying = true
+    local control = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local lastControl = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+
+    local bodyGyro = Instance.new("BodyGyro")
+    local bodyVelocity = Instance.new("BodyVelocity")
+
+    bodyGyro.P = 9e4
+    bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bodyGyro.CFrame = hrp.CFrame
+    bodyGyro.Parent = hrp
+
+    bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = hrp
+
+    humanoid.PlatformStand = true
+
+    -- Movement Controls
+    local flyKeyDown = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        local key = input.KeyCode
+        if key == Enum.KeyCode.W then control.F = speed end
+        if key == Enum.KeyCode.S then control.B = -speed end
+        if key == Enum.KeyCode.A then control.L = -speed end
+        if key == Enum.KeyCode.D then control.R = speed end
+        if key == Enum.KeyCode.E then control.Q = speed end
+        if key == Enum.KeyCode.Q then control.E = -speed end
+    end)
+
+    local flyKeyUp = UserInputService.InputEnded:Connect(function(input)
+        local key = input.KeyCode
+        if key == Enum.KeyCode.W then control.F = 0 end
+        if key == Enum.KeyCode.S then control.B = 0 end
+        if key == Enum.KeyCode.A then control.L = 0 end
+        if key == Enum.KeyCode.D then control.R = 0 end
+        if key == Enum.KeyCode.E then control.Q = 0 end
+        if key == Enum.KeyCode.Q then control.E = 0 end
+    end)
+
+    -- Movement Loop
+    local flyLoop = RunService.RenderStepped:Connect(function()
+        if not flying or not hrp then return end
+        bodyVelocity.Velocity = (
+            workspace.CurrentCamera.CFrame.LookVector * (control.F + control.B) +
+            workspace.CurrentCamera.CFrame.RightVector * (control.L + control.R) +
+            workspace.CurrentCamera.CFrame.UpVector * (control.Q + control.E)
+        ) * 2
+        bodyGyro.CFrame = workspace.CurrentCamera.CFrame
+    end)
+
+    -- Stop flying function
+    local function stopFly()
+        flying = false
+        bodyGyro:Destroy()
+        bodyVelocity:Destroy()
+        humanoid.PlatformStand = false
+        flyKeyDown:Disconnect()
+        flyKeyUp:Disconnect()
+        flyLoop:Disconnect()
+        print("[SUCCESS] Fly mode disabled.")
+    end
+
+    print("[SUCCESS] Fly mode enabled. Use WASD to move, E to ascend, Q to descend.")
+    
+elseif command == "unfly" then
+    ---------------------------------------------------------------------
+    -- unfly (Stops flying)
+    ---------------------------------------------------------------------
+    print("[INFO] Unfly command activated. Stopping fly mode...")
+
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+
+    if not hrp or not humanoid then
+        warn("[ERROR] Missing HumanoidRootPart or Humanoid. Cannot stop flying properly.")
+        return
+    end
+
+    -- Stop Fly State
+    _G.IsFlying = false
+
+    -- Remove Flight Forces
+    for _, obj in pairs(hrp:GetChildren()) do
+        if obj:IsA("BodyGyro") or obj:IsA("BodyVelocity") then
+            obj:Destroy()
+        end
+    end
+
+    -- Restore Humanoid State
+    humanoid.PlatformStand = false
+
+    -- Disconnect Fly Connections
+    if _G.FlyConnections then
+        for _, conn in pairs(_G.FlyConnections) do
+            if conn and conn.Connected then
+                conn:Disconnect()
+            end
+        end
+        _G.FlyConnections = nil
+    end
+
+    print("[SUCCESS] Fly mode disabled. Character movement restored.")
+
+elseif command:sub(1,4) == "trap" then
+    ---------------------------------------------------------------------
+    -- trap [name]
+    ---------------------------------------------------------------------
+    local targetPrefix = command:sub(6):lower()
+
+    -- The "trap" location: 
+    local trapCFrame = CFrame.new(
+        -1120.47, 38.80, 374.13, 
+        -0.74424, -0.00000, 0.66791,
+        -0.00000, 1.00000, 0.00000,
+        -0.66791, -0.00000, -0.74424
+    )
+
+    -- Make sure your character exists
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        warn("[ERROR] Your character is invalid or missing HumanoidRootPart.")
+        return
+    end
+
+    -- Store your original position
+    local originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+
+    -- Find the stroller
+    local tool = LocalPlayer.Backpack:FindFirstChild("Stroller")
+                or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stroller"))
+    if not tool then
+        warn("[ERROR] No 'Stroller' gear found in your backpack/character.")
+        return
+    end
+
+    -- Equip stroller if not already
+    if tool.Parent ~= LocalPlayer.Character then
+        tool.Parent = LocalPlayer.Character
+        LocalPlayer.Character.Humanoid:EquipTool(tool)
+        task.wait(0.3)
+    end
+
+    -- Handle Unequip event
+    local unequipConnection
+    unequipConnection = tool.Unequipped:Connect(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+            print("[INFO] Stroller unequipped. Returned to original position.")
+            unequipConnection:Disconnect()
+        end
+    end)
+
+    -- Teleport YOU to trap coords
+    LocalPlayer.Character:SetPrimaryPartCFrame(trapCFrame)
+    task.wait(0.3)
+
+    -- Find target player
+    local foundPlayer = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        local pName = player.Name:lower()
+        local pDisplay = player.DisplayName:lower()
+        if player ~= LocalPlayer
+           and (pName:sub(1, #targetPrefix) == targetPrefix
+           or pDisplay:sub(1, #targetPrefix) == targetPrefix) then
+            foundPlayer = player
+            break
+        end
+    end
+
+    if not foundPlayer then
+        warn("[ERROR] No matching player found for: " .. targetPrefix)
+        return
+    end
+
+    -- Make sure target has a valid character
+    local targetChar = foundPlayer.Character
+    if not targetChar 
+       or not targetChar:FindFirstChild("HumanoidRootPart") 
+       or not targetChar:FindFirstChild("Humanoid") then
+        warn("[ERROR] Target missing Character/HumanoidRootPart/Humanoid.")
+        return
+    end
+
+    -- Teleport the target in front of you (at the trap location)
+    targetChar:SetPrimaryPartCFrame(
+        LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+    )
+    task.wait(0.3)
+
+    -- Activate stroller so they can sit
+    print("[INFO] Activating stroller for trap command...")
+    tool:Activate()
+    task.wait(0.3)
+
+    -- Wait up to 5s for them to sit
+    local seatTimeout = 5
+    local seatDetected = false
+    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+    if targetHumanoid then
+        print("[INFO] Waiting up to " .. seatTimeout .. " seconds for target to sit...")
+
+        local startTime = tick()
+        while (tick() - startTime) < seatTimeout do
+            if targetHumanoid.Sit == true then
+                seatDetected = true
+                break
+            end
+            task.wait(0.2)
+        end
+    end
+
+    if seatDetected then
+        print("[SUCCESS] Target is now seated in the trap. Teleporting you back home...")
+    else
+        print("[WARNING] Target never sat. Leaving them in the trap. Teleporting you back...")
+    end
+
+    -- Teleport YOU back to original position
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character:SetPrimaryPartCFrame(originalPosition)
+        -- Unequip the stroller manually
+        tool.Parent = LocalPlayer.Backpack
+        if unequipConnection then unequipConnection:Disconnect() end
+        print("[SUCCESS] You're back at your original location. Target remains in the trap.")
+    else
+        warn("[ERROR] Missing your HumanoidRootPart upon final return.")
+    end
+
+    -- Final cleanup to ensure event disconnection
+    if unequipConnection then unequipConnection:Disconnect() end
+
 -- cmds (toggle command list)
 elseif command == "cmds" then
 	CommandList.Visible = not CommandList.Visible
@@ -2290,4 +2548,19 @@ elseif command == "cmds" then
 else
 	print("Unknown command: " .. command)
 end
+
+    -- Hide the Command Bar after processing
+    CommandBar.Visible = false
+    CommandInput:ReleaseFocus()
+end)
+
+--------------------------------------
+-- Close Command Bar on Escape Key
+--------------------------------------
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Escape and CommandBar.Visible then
+        CommandBar.Visible = false
+        CommandInput:ReleaseFocus()
+    end
 end)
